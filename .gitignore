@@ -1,0 +1,374 @@
+import React, { useState, useMemo } from 'react';
+import { Heart, Search, Plus, X, Upload, Calendar, Archive, Filter, Edit, Trash2, Map, Clock } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
+const initialMemories = [
+  {
+    id: 1,
+    title: 'Summer Vacation 2023',
+    description: 'Amazing family trip to the beach',
+    date: '2023-07-15',
+    location: 'Maldives',
+    tags: ['vacation', 'family'],
+    image: '/api/placeholder/400/300',
+    isFavorite: false,
+    isArchived: false
+  },
+  {
+    id: 2,
+    title: "Birthday Celebration",
+    description: "John's 30th birthday party",
+    date: '2023-09-20',
+    location: 'Home',
+    tags: ['celebration'],
+    image: '/api/placeholder/400/300',
+    isFavorite: true,
+    isArchived: false
+  }
+];
+
+const filters = [
+  { id: 'all', label: 'All Memories' },
+  { id: 'family', label: 'Family' },
+  { id: 'vacation', label: 'Travels' },
+  { id: 'celebration', label: 'Celebrations' },
+  { id: 'favorites', label: 'Favorites' },
+  { id: 'archived', label: 'Archived' }
+];
+
+const availableTags = ['family', 'vacation', 'celebration', 'friends', 'work', 'travel'];
+
+const MemoryCard = ({ memory, onFavoriteToggle, onArchiveToggle, onEditMemory, onDeleteMemory }) => (
+  <Card className="group hover:shadow-lg transition-shadow duration-200 relative">
+    <div className="relative">
+      <img
+        src={memory.image}
+        alt={memory.title}
+        className="w-full h-48 object-cover"
+      />
+      <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onFavoriteToggle(memory.id)}
+          className="bg-white hover:bg-gray-100"
+        >
+          <Heart className={`h-5 w-5 ${memory.isFavorite ? 'fill-purple-500 text-purple-500' : 'text-gray-500'}`} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onArchiveToggle(memory.id)}
+          className="bg-white hover:bg-gray-100"
+        >
+          <Archive className={`h-5 w-5 ${memory.isArchived ? 'text-purple-500' : 'text-gray-500'}`} />
+        </Button>
+      </div>
+    </div>
+    
+    <CardContent className="p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-purple-500 mb-2">
+          <Calendar className="h-4 w-4" />
+          {new Date(memory.date).toLocaleDateString()}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => onEditMemory(memory)}
+          >
+            <Edit className="h-4 w-4 text-gray-500" />
+          </Button>
+        </div>
+      </div>
+      
+      <h3 className="text-lg font-semibold text-gray-900 mb-2">{memory.title}</h3>
+      <p className="text-gray-600 mb-4 line-clamp-2">{memory.description}</p>
+      
+      <div className="flex items-center justify-between">
+        <div className="flex flex-wrap gap-2 flex-1">
+          {memory.tags.map(tag => (
+            <span key={tag} className="px-2 py-1 rounded-full bg-purple-50 text-purple-600 text-sm font-medium">
+              {tag}
+            </span>
+          ))}
+          {memory.location && (
+            <span className="px-2 py-1 rounded-full bg-purple-50 text-purple-600 text-sm font-medium flex items-center gap-1">
+              <Map className="h-3 w-3" /> {memory.location}
+            </span>
+          )}
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const CreateEditMemoryDialog = ({ 
+  open, 
+  onClose, 
+  onSubmit, 
+  selectedTags, 
+  onTagToggle, 
+  initialMemory = null 
+}) => (
+  <Dialog open={open} onOpenChange={onClose}>
+    <DialogContent className="max-w-[425px]">
+      <DialogHeader>
+        <DialogTitle className="text-xl font-semibold text-purple-600">
+          {initialMemory ? 'Edit Memory' : 'Create New Memory'}
+        </DialogTitle>
+      </DialogHeader>
+
+      <form onSubmit={(e) => onSubmit(e, initialMemory)} className="space-y-4">
+        <div className="grid w-full place-items-center border-2 border-dashed rounded-lg p-8 text-center border-purple-200 hover:border-purple-400 transition-colors duration-200">
+          <Upload className="h-8 w-8 text-purple-400 mb-2" />
+          <p className="text-sm text-purple-600">Drop your image here or click to upload</p>
+        </div>
+
+        <div className="space-y-2">
+          <Input
+            name="title"
+            placeholder="Memory title"
+            defaultValue={initialMemory?.title || ''}
+            required
+          />
+          <Textarea
+            name="description"
+            placeholder="Describe your memory"
+            defaultValue={initialMemory?.description || ''}
+            required
+          />
+          <Input
+            name="date"
+            type="date"
+            defaultValue={initialMemory?.date || ''}
+            required
+          />
+          <Input
+            name="location"
+            placeholder="Location"
+            defaultValue={initialMemory?.location || ''}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {availableTags.map(tag => (
+            <Button
+              key={tag}
+              type="button"
+              variant={selectedTags.has(tag) ? 'default' : 'outline'}
+              onClick={() => onTagToggle(tag)}
+            >
+              {tag}
+            </Button>
+          ))}
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit">
+            Save Memory
+          </Button>
+        </div>
+      </form>
+    </DialogContent>
+  </Dialog>
+);
+
+export default function MemoryGallery() {
+  const [memories, setMemories] = useState(initialMemories);
+  const [currentFilter, setCurrentFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTags, setSelectedTags] = useState(new Set());
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingMemory, setEditingMemory] = useState(null);
+
+  const filteredMemories = useMemo(() => {
+    return memories.filter(memory => {
+      const matchesSearch = memory.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        memory.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        memory.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        memory.location.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesFilter = currentFilter === 'all' ||
+        (currentFilter === 'favorites' && memory.isFavorite) ||
+        (currentFilter === 'archived' && memory.isArchived) ||
+        (!memory.isArchived && memory.tags.includes(currentFilter));
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [memories, searchQuery, currentFilter]);
+
+  const handleFavoriteToggle = (id) => {
+    setMemories(memories.map(memory =>
+      memory.id === id ? { ...memory, isFavorite: !memory.isFavorite } : memory
+    ));
+  };
+
+  const handleArchiveToggle = (id) => {
+    setMemories(memories.map(memory =>
+      memory.id === id ? { ...memory, isArchived: !memory.isArchived } : memory
+    ));
+  };
+
+  const handleTagToggle = (tag) => {
+    setSelectedTags(prev => {
+      const newTags = new Set(prev);
+      if (newTags.has(tag)) {
+        newTags.delete(tag);
+      } else {
+        newTags.add(tag);
+      }
+      return newTags;
+    });
+  };
+
+  const handleSubmit = (e, existingMemory = null) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const newMemory = {
+      id: existingMemory ? existingMemory.id : memories.length + 1,
+      title: formData.get('title'),
+      description: formData.get('description'),
+      date: formData.get('date'),
+      location: formData.get('location'),
+      tags: Array.from(selectedTags),
+      image: existingMemory?.image || '/api/placeholder/400/300',
+      isFavorite: existingMemory?.isFavorite || false,
+      isArchived: existingMemory?.isArchived || false
+    };
+
+    setMemories(prev => 
+      existingMemory 
+        ? prev.map(m => m.id === newMemory.id ? newMemory : m)
+        : [newMemory, ...prev]
+    );
+
+    setIsModalOpen(false);
+    setSelectedTags(new Set());
+    setEditingMemory(null);
+    e.target.reset();
+  };
+
+  const handleEditMemory = (memory) => {
+    setEditingMemory(memory);
+    setSelectedTags(new Set(memory.tags));
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteMemory = (id) => {
+    setMemories(memories.filter(memory => memory.id !== id));
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="sticky top-0 z-10 bg-white border-b border-purple-100 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">
+              Memento
+            </h1>
+            
+            <div className="flex items-center gap-4 flex-1 max-w-lg mx-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 h-4 w-4" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search memories..."
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Memory
+            </Button>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-4">
+            {filters.map(filter => (
+              <Button
+                key={filter.id}
+                variant={currentFilter === filter.id ? 'default' : 'outline'}
+                onClick={() => setCurrentFilter(filter.id)}
+                className="whitespace-nowrap"
+              >
+                {filter.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {filteredMemories.length === 0 && (
+          <div className="text-center text-gray-500 py-12">
+            <Filter className="mx-auto h-12 w-12 text-purple-300 mb-4" />
+            <p>No memories match your current filter or search.</p>
+          </div>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredMemories.map(memory => (
+            <div key={memory.id} className="relative group">
+              <MemoryCard
+                memory={memory}
+                onFavoriteToggle={handleFavoriteToggle}
+                onArchiveToggle={handleArchiveToggle}
+                onEditMemory={handleEditMemory}
+                onDeleteMemory={handleDeleteMemory}
+              />
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="destructive" 
+                    size="icon" 
+                    className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete this memory. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleDeleteMemory(memory.id)}>
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          ))}
+        </div>
+      </main>
+
+      <CreateEditMemoryDialog
+        open={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedTags(new Set());
+          setEditingMemory(null);
+        }}
+        onSubmit={handleSubmit}
+        selectedTags={selectedTags}
+        onTagToggle={handleTagToggle}
+        initialMemory={editingMemory}
+      />
+    </div>
+  );
+}
